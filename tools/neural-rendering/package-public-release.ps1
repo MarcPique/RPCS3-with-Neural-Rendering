@@ -27,11 +27,12 @@ Copy-Item -LiteralPath (Join-Path $repo 'NEURAL_RENDERING.md') -Destination (Joi
 Copy-Item -LiteralPath (Join-Path $repo 'docs/neural-rendering/VALIDACION.md') -Destination $package
 Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination $package
 [IO.File]::WriteAllText((Join-Path $package 'neural-rendering.json'), '{"schema":1,"enabled":false}', [Text.UTF8Encoding]::new($false))
-$provenancePath = Join-Path $package 'THIRD-PARTY-NOTICES/SOURCE-PROVENANCE.json'
-$provenance = Get-Content -LiteralPath $provenancePath -Raw | ConvertFrom-Json
-foreach ($record in $provenance.qtArchiveProvenance) { $record.PSObject.Properties.Remove('destination') }
-$provenance | Add-Member -NotePropertyName forkSourceCommit -NotePropertyValue $sourceCommit -Force
-$provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $provenancePath -Encoding utf8
+foreach ($provenanceFile in Get-ChildItem -LiteralPath (Join-Path $package 'THIRD-PARTY-NOTICES') -Filter 'SOURCE-PROVENANCE.json' -File -Recurse) {
+    $provenance = Get-Content -LiteralPath $provenanceFile.FullName -Raw | ConvertFrom-Json
+    foreach ($record in $provenance.qtArchiveProvenance) { $record.PSObject.Properties.Remove('destination') }
+    $provenance | Add-Member -NotePropertyName forkSourceCommit -NotePropertyValue $sourceCommit -Force
+    $provenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $provenanceFile.FullName -Encoding utf8
+}
 $exe = Join-Path $package 'rpcs3.exe'
 $buildInfo = [ordered]@{
     release = 'v0.2.0-neural'

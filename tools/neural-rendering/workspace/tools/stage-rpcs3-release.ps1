@@ -11,11 +11,17 @@ if (-not [IO.Path]::GetFullPath($stage).StartsWith($workspace + '\', [StringComp
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 foreach ($item in (Get-ChildItem -LiteralPath $repoBin -Force)) {
     if ($item.Name -eq 'test' -or $item.Extension -in @('.pdb','.exp','.lib') -or $item.Name -eq 'vc_redist.x64.exe') { continue }
-    Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $stage $item.Name) -Recurse -Force
+    Copy-Item -LiteralPath $item.FullName -Destination $stage -Recurse -Force
 }
 # RPCS3 requires the system VC++ redistributable and rejects app-local CRT DLLs.
 $notices = Join-Path $workspace 'build\third-party-notices'
-if (Test-Path -LiteralPath $notices) { Copy-Item -LiteralPath $notices -Destination (Join-Path $stage 'THIRD-PARTY-NOTICES') -Recurse -Force }
+if (Test-Path -LiteralPath $notices) {
+    $noticeDestination = Join-Path $stage 'THIRD-PARTY-NOTICES'
+    New-Item -ItemType Directory -Path $noticeDestination -Force | Out-Null
+    foreach ($item in Get-ChildItem -LiteralPath $notices) {
+        Copy-Item -LiteralPath $item.FullName -Destination $noticeDestination -Recurse -Force
+    }
+}
 foreach ($required in @('rpcs3.exe','Qt6Core.dll','Qt6Gui.dll','Qt6Widgets.dll','Qt6Svg.dll','Qt6Multimedia.dll','qt6\plugins\platforms\qwindows.dll')) {
     if (-not (Test-Path -LiteralPath (Join-Path $stage $required))) { throw "Incomplete deployed runtime: $required" }
 }
