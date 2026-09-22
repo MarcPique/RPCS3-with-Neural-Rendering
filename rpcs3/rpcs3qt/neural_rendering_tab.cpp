@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QDialog>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFile>
@@ -16,6 +17,8 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProcess>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSignalBlocker>
@@ -25,6 +28,10 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+
+#ifdef _WIN32
+#include <qt_windows.h>
+#endif
 
 #include <utility>
 #include <initializer_list>
@@ -446,6 +453,18 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 	m_editors->addTab(diagnostics_page, tr("Diagnóstico"));
 
 	auto* footer = new QHBoxLayout;
+	m_download = new QPushButton(tr("Descargar / reparar componentes"), this);
+	m_download->setObjectName(QStringLiteral("neural_download_components"));
+	m_download->setToolTip(tr("Descarga ReShade, Feeder, RenoDX, modelos y shaders desde sus autores. Conserva tus ajustes. Requiere conexión a Internet."));
+	footer->addWidget(m_download);
+	connect(m_download, &QPushButton::clicked, this, [this]() { install_components(); });
+	connect(m_enabled, &QCheckBox::clicked, this, [this](bool checked)
+	{
+		if (checked && !neural_rendering::validate_runtime().isEmpty() && !install_components())
+		{
+			m_enabled->setChecked(false);
+		}
+	});
 	auto* folder_button = new QPushButton(tr("Abrir carpeta de componentes"), this);
 	footer->addWidget(folder_button);
 	footer->addStretch();
@@ -513,6 +532,10 @@ void neural_rendering_tab::refresh_status()
 {
 	const bool stopped = !m_can_edit || m_can_edit();
 	const bool editable = stopped && m_load_error.isEmpty();
+	m_download->setEnabled(editable);
+#ifndef _WIN32
+	m_download->setEnabled(false);
+#endif
 	// Keep the recovery switch available if a damaged INI cannot be read.
 	m_enabled->setEnabled(stopped && (m_load_error.isEmpty() || m_original_enabled));
 	// Leave diagnostics accessible while a game is running.
@@ -538,8 +561,122 @@ bool neural_rendering_tab::show_error(const QString& message)
 	return false;
 }
 
+bool neural_rendering_tab::install_components()
+{
+#ifndef _WIN32
+	return show_error(tr("La descarga integrada requiere Windows x64."));
+#else
+	if (m_can_edit && !m_can_edit()) return show_error(tr("Detén la emulación antes de instalar componentes."));
+	if (!m_load_error.isEmpty()) return show_error(m_load_error);
+	// Do not replace libraries mapped into this process, even with emulation stopped.
+	if (GetModuleHandleW(L"ReShade64.dll") || GetModuleHandleW(L"VkLayer_feed_vk.dll") ||
+		GetModuleHandleW(L"renodx-dlss5.addon64") || GetModuleHandleW(L"dlss5-feed.addon64"))
+	{
+		return show_error(tr("Los componentes están en uso. Desactiva ReShade, guarda y reinicia RPCS3 antes de repararlos."));
+	}
+	const QDir root(neural_rendering::root_path());
+	for (const QString& name : {QStringLiteral("Setup-Neural.ps1"), QStringLiteral("fetch-neural-runtime.ps1")})
+	{
+		if (!QFileInfo(root.filePath(name)).isFile())
+			return show_error(tr("Falta %1 junto a rpcs3.exe. Extrae el ZIP completo del release, incluidos sus scripts y DLL.").arg(name));
+	}
+
+	QDialog dialog(this);
+	dialog.setObjectName(QStringLiteral("neural_download_dialog"));
+	dialog.setWindowTitle(tr("Descargar componentes Neural / ReShade"));
+	dialog.resize(720, 420);
+	auto* layout = new QVBoxLayout(&dialog);
+	auto* label = new QLabel(tr("Descargando y verificando componentes desde sus autores. Tus ajustes se conservan."), &dialog);
+	label->setWordWrap(true);
+	layout->addWidget(label);
+	auto* progress = new QProgressBar(&dialog);
+	progress->setRange(0, 0);
+	layout->addWidget(progress);
+	auto* output = new QPlainTextEdit(&dialog);
+	output->setObjectName(QStringLiteral("neural_download_output"));
+	output->setReadOnly(true);
+	output->setMaximumBlockCount(2000);
+	layout->addWidget(output, 1);
+	auto* cancel = new QPushButton(tr("Cancelar"), &dialog);
+	cancel->setObjectName(QStringLiteral("neural_download_cancel"));
+	layout->addWidget(cancel);
+	QProcess process(&dialog);
+	process.setProcessChannelMode(QProcess::MergedChannels);
+	process.setWorkingDirectory(root.absolutePath());
+	process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* arguments)
+	{
+		arguments->flags |= CREATE_NO_WINDOW;
+	});
+	bool succeeded = false;
+	QString failure;
+	const auto drain = [&]()
+	{
+		const QByteArray bytes = process.readAll();
+		if (!bytes.isEmpty()) output->appendPlainText(QString::fromUtf8(bytes));
+	};
+	connect(&process, &QProcess::readyReadStandardOutput, &dialog, drain);
+	connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+	connect(&process, &QProcess::errorOccurred, &dialog, [&](QProcess::ProcessError error)
+	{
+		failure = process.errorString();
+		if (error == QProcess::FailedToStart) dialog.done(QDialog::Accepted);
+	});
+	connect(&process, &QProcess::finished, &dialog, [&](int code, QProcess::ExitStatus status)
+	{
+		drain();
+		succeeded = status == QProcess::NormalExit && code == 0;
+		if (!succeeded && failure.isEmpty()) failure = tr("El instalador terminó con código %1.").arg(code);
+		dialog.done(QDialog::Accepted);
+	});
+	const QString powershell = QDir(qEnvironmentVariable("SystemRoot", QStringLiteral("C:/Windows")))
+		.filePath(QStringLiteral("System32/WindowsPowerShell/v1.0/powershell.exe"));
+	// Pass separate arguments, never concatenate user paths into a shell command.
+	QTimer::singleShot(0, &dialog, [&]()
+	{
+		process.start(powershell, {QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
+			QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"), QStringLiteral("-File"),
+			QDir::toNativeSeparators(root.filePath(QStringLiteral("Setup-Neural.ps1"))),
+			QStringLiteral("-RpcS3Directory"), QDir::toNativeSeparators(root.absolutePath()),
+			QStringLiteral("-FromRpcS3Id"), QString::number(QCoreApplication::applicationPid())});
+	});
+	const bool canceled = dialog.exec() != QDialog::Accepted;
+	if (process.state() != QProcess::NotRunning)
+	{
+		process.kill();
+		process.waitForFinished(3000);
+	}
+	drain();
+	neural_rendering::write_text(root.filePath(QStringLiteral("neural-install.log")), output->toPlainText());
+	refresh_status();
+	if (canceled)
+	{
+		m_status->setText(tr("Descarga cancelada. Puedes reintentar; no se ha guardado la activación."));
+		return false;
+	}
+	if (!succeeded) return show_error(tr("No se pudieron instalar los componentes. Puedes reintentar.\n%1\n\n%2")
+		.arg(failure, output->toPlainText().right(4000)));
+	const QString runtime_error = neural_rendering::validate_runtime();
+	if (!runtime_error.isEmpty()) return show_error(tr("La descarga terminó, pero faltan archivos válidos:\n%1").arg(runtime_error));
+	// Host mode never writes INI/CFG or activation files. Pending edits stay intact.
+	if (!m_feeder_existed && m_feeder->toPlainText().isEmpty())
+		m_feeder->setPlainText(QStringLiteral("enabled=1\nmode=2\nvk_present_sync=1\n"));
+	refresh_fields();
+	m_status->setText(tr("Componentes instalados. Elige un preset si lo deseas, guarda y reinicia RPCS3 para activar la integración."));
+	return true;
+#endif
+}
+
 bool neural_rendering_tab::save()
 {
+	if (m_enabled->isChecked() && m_enabled->isChecked() != m_original_enabled &&
+		!neural_rendering::validate_runtime().isEmpty() && (!m_can_edit || m_can_edit()))
+	{
+		QMessageBox prompt(QMessageBox::Information, tr("Neural rendering / ReShade"),
+			tr("Faltan componentes o necesitan reparación. Descárgalos desde sus autores para activar la integración."), QMessageBox::Cancel, this);
+		auto* download = prompt.addButton(tr("Descargar e instalar"), QMessageBox::AcceptRole);
+		prompt.exec();
+		if (prompt.clickedButton() != download || !install_components()) return false;
+	}
 	const QString config = m_config->toPlainText();
 	const QString preset = m_preset->toPlainText();
 	const QString feeder = m_feeder->toPlainText();

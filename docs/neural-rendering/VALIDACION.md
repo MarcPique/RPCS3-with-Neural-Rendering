@@ -1,9 +1,19 @@
-# Validación — RPCS3 Neural / ReShade 0.2.0 experimental
+# Validación — RPCS3 Neural / ReShade 0.2.1 experimental
 
 Fecha: 22 de septiembre de 2026. Paquete local Windows x64.
 
 Base RPCS3: `8db660b185496f115701ef4c77c1ca2bef60e422` (0.0.42).
-Ejecutable SHA256: `6345d11d637760cad0d9efabbc61e939b08e0d96a30fea9869daa57b19f6ad4f`.
+Ejecutable SHA256: `f576ceb0ab4bda5a395d2e6f2d31e0908fecba89709e52c57bb5e4cfe8a4583e`.
+
+## Corrección 0.2.1
+
+- Compilación final Release x64: 0 errores y 0 advertencias.
+- Las dos suites Qt (`neural-rendering-ui` y `neural-rendering-download`) pasaron. Las nuevas pruebas ejecutan un instalador local simulado, sin red, para verificar scripts ausentes, salida de error, descarga incompleta, cancelación, activación automática desde la casilla, conservación de cambios pendientes, guardado posterior y bloqueo durante emulación.
+- En el ejecutable RPCS3 real se completó la instalación con el emulador abierto, usando las descargas almacenadas en caché y las consultas a los autores. Se verificaron 32 hashes instalados. Antes de pulsar Save no se había creado ReShade.ini y la activación seguía desmarcada en disco; Save creó los ajustes y guardó la activación correctamente.
+- Se inspeccionaron las importaciones de los 42 EXE/DLL del paquete. Se resuelven en el paquete o Windows/System32, con el runtime Visual C++ de esta máquina. OpenCV, Qt y FFmpeg están incluidos. Esto no sustituye una prueba en otro Windows sin Visual C++ instalado.
+- Se ofrece un EXE autoextraíble con todas las dependencias, además del ZIP completo. Se retira el EXE del emulador suelto del release anterior para evitar ejecutarlo sin sus DLL.
+
+Las comprobaciones siguientes se realizaron durante el desarrollo 0.2.0. Se mantienen los mismos componentes neurales; las pruebas Qt se han vuelto a ejecutar con 0.2.1.
 
 ## Resultados
 
@@ -25,6 +35,6 @@ Máquina: NVIDIA GeForce RTX 4090, controlador 616.56; también hay una GPU AMD 
 
 ## Uso
 
-Extrae el ZIP público, ejecuta `Setup-Neural.ps1` para obtener los componentes, abre `rpcs3.exe`, selecciona Vulkan y la GPU NVIDIA, activa **Config → Neural / ReShade → Cargar ReShade Vulkan en RPCS3**, guarda y reinicia. El paquete empieza con la carga desactivada. Consulta `LEEME.md` en el ZIP o `NEURAL_RENDERING.md` en el repositorio para los ajustes, controles avanzados y licencias.
+Extrae el paquete completo, abre `rpcs3.exe`, selecciona Vulkan y la GPU NVIDIA, y usa **Config → Neural / ReShade → Descargar / reparar componentes**. Marcar la casilla de activación también inicia la descarga si faltan archivos. Guarda y reinicia. El paquete empieza con la carga desactivada. Consulta `LEEME.md` en el ZIP o `NEURAL_RENDERING.md` en el repositorio para los ajustes, controles avanzados y licencias.
 
 Es una compilación independiente y experimental. El release público excluye los componentes neurales con redistribución restringida o no verificada; el descargador los obtiene de sus autores para uso local. El código de la integración, pruebas y scripts está en este fork.

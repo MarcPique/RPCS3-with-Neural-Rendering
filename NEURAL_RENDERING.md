@@ -8,14 +8,22 @@ La ruta de renderizado es **RPCS3 Vulkan → ReShade → LumeniteFX → DLSS5-Fe
 
 Requiere Windows x64, el redistribuible Microsoft Visual C++ x64 compatible con MSVC 14.51 o posterior y una GPU/controlador compatible con los componentes neurales. La máquina de prueba tiene una RTX 4090 y controlador 616.56. RPCS3 necesita el runtime de Visual C++ instalado en Windows; no copies `msvcp140.dll` ni `vcruntime140.dll` junto al ejecutable.
 
-1. Extrae `RPCS3-Neural-0.2.0-public-win64.zip` en una carpeta con permisos de escritura. Abre PowerShell en esa carpeta y ejecuta `./Setup-Neural.ps1` para descargar los componentes desde sus autores. Conserva los dos scripts juntos. El EXE suelto requiere las dependencias del ZIP. No hace falta ejecutar el script como administrador.
+1. Ejecuta el autoextraíble `Extraer-RPCS3-Neural-0.2.1-win64.exe` o extrae **todo** `RPCS3-Neural-0.2.1-public-win64.zip` en una carpeta con permisos de escritura. Ambos incluyen `rpcs3.exe`, OpenCV, Qt y las demás DLL. Abre el emulador desde la carpeta extraída, sin separar el EXE de sus DLL.
 2. Abre RPCS3 y selecciona **Vulkan** y la GPU NVIDIA en los ajustes de GPU.
-3. En **Neural / ReShade**, comprueba **Diagnóstico**, activa la carga Vulkan y guarda.
+3. En **Neural / ReShade**, pulsa **Descargar / reparar componentes**. También se descargan automáticamente al marcar la casilla de carga Vulkan si faltan archivos. La ventana muestra el progreso y permite cancelar. Elige un preset si lo deseas, activa la integración y guarda.
 4. Cierra y vuelve a abrir RPCS3. Inicia el juego.
 5. **Inicio/Home** abre ReShade. Comprueba que los complementos se hayan cargado y que `Lumenite_Kernel` preceda a `DLSS5_Feed` en los efectos activos. El complemento neural tiene sus propios controles; la carga de ReShade por sí sola no significa que la evaluación neural esté activa.
 6. Detén el juego antes de editar los ajustes persistidos desde RPCS3. ReShade puede escribir esos archivos mientras está en uso.
 
 La pestaña incluye controles de ReShade, activación e intensidad neural de RenoDX, presets, estilo, máscaras, profundidad, vectores de movimiento y controles del Feeder. Incluye edición completa de `ReShade.ini`, `ReShadePreset.ini` y `dlss5-feed.cfg`, y consulta de registros. Los editores completos permiten configurar las opciones persistidas de los complementos aunque aparezcan nuevas claves en sus versiones posteriores. Las opciones transitorias del overlay que no se guardan en INI siguen perteneciendo al complemento.
+
+### Descarga integrada (0.2.1)
+
+No necesitas abrir PowerShell: el botón utiliza los scripts incluidos junto al EXE para descargar desde los autores. Los componentes descargados permanecen instalados; los ajustes y la activación solo se guardan con **Aplicar / Guardar**. Si falla o cancelas la descarga iniciada desde la casilla, esta vuelve a quedar desmarcada. Puedes reintentar usando la caché local. El registro está en `neural-install.log`.
+
+Para reparar componentes ya cargados, desactiva ReShade, guarda y reinicia antes de usar el botón. La instalación se bloquea durante la emulación y si otra instancia de esa misma copia de RPCS3 está abierta. `Setup-Neural.ps1` sigue disponible como alternativa manual con RPCS3 cerrado.
+
+Si Windows informa de que falta `opencv_world4140.dll` o una DLL de Qt, se ha abierto una copia incompleta: vuelve a extraer el paquete completo. No descargues esas DLL por separado. El release ya no ofrece el emulador suelto como descarga independiente.
 
 ### Configuración rápida y deslizadores (0.2.0)
 

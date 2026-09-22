@@ -1,11 +1,13 @@
 RPCS3 Neural / ReShade — unofficial experimental fork
 ====================================================
 
-[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.0-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
+[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.1-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
 
 This fork adds a **Neural / ReShade** settings tab, local Vulkan integration, numeric sliders for intensity, tone, structure and skin, and four quick presets: Suave, Equilibrado, Detalle and Cinematográfico. The component selection follows [DLSS5oneclick](https://github.com/faisalkindi/DLSS5oneclick). This is community integration through ReShade/Feeder, not an official NVIDIA DLSS integration or an official RPCS3 release.
 
-Extract `RPCS3-Neural-0.2.0-public-win64.zip`, then run `Setup-Neural.ps1` from PowerShell in that folder to download the neural components from their authors. Start `rpcs3.exe`, select Vulkan and your compatible NVIDIA GPU, then choose **Config → Neural / ReShade → Neural / Feeder → preset → Usar preset → Save** and restart. Activation is off by default. The separate EXE asset requires the dependencies from the ZIP.
+Download **`Extraer-RPCS3-Neural-0.2.1-win64.exe`** (self-extracting package) or extract **`RPCS3-Neural-0.2.1-public-win64.zip`** completely. Both contain RPCS3 and its DLLs, including OpenCV and Qt. Open `rpcs3.exe` inside the extracted folder; do not move it away from its DLLs or run it from inside a ZIP.
+
+In **Config → Neural / ReShade**, click **Descargar / reparar componentes**, or enable the ReShade checkbox to download missing components automatically. Progress, cancellation and errors are shown in RPCS3. No terminal is needed. Select Vulkan and your compatible NVIDIA GPU, choose a quick preset if desired, save and restart. Activation is off by default; the download preserves pending settings until you save.
 
 The public archive contains the emulator, its redistributable dependencies, licenses and setup scripts. It excludes neural models/add-ons and LumeniteFX; those are downloaded locally because their redistribution is restricted or unverified. Requires Windows x64 and the Microsoft Visual C++ x64 runtime compatible with MSVC 14.51 or later.
 

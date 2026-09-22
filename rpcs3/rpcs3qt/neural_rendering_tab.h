@@ -9,6 +9,7 @@ class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
+class QPushButton;
 class QTabWidget;
 
 // All edits remain in memory until the settings dialog calls save().
@@ -32,12 +33,14 @@ private:
 	void refresh_status();
 	void set_value(QPlainTextEdit* editor, const QString& section, const QString& key, const QString& value);
 	bool show_error(const QString& message);
+	bool install_components();
 
 	std::function<bool()> m_can_edit;
 	QCheckBox* m_enabled = nullptr;
 	QCheckBox* m_performance_mode = nullptr;
 	QCheckBox* m_neural_uplift = nullptr;
 	QLabel* m_status = nullptr;
+	QPushButton* m_download = nullptr;
 	QLabel* m_preset_notice = nullptr;
 	QPlainTextEdit* m_config = nullptr;
 	QPlainTextEdit* m_preset = nullptr;
