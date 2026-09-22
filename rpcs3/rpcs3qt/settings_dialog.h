@@ -9,6 +9,7 @@
 #include <memory>
 
 class gui_settings;
+class neural_rendering_tab;
 struct GameInfo;
 
 namespace Ui
@@ -46,6 +47,7 @@ private:
 
 	// Gpu tab
 	QString m_old_renderer;
+	neural_rendering_tab* m_neural_rendering_tab = nullptr;
 
 	// Audio tab
 	std::array<QComboBox*, 4> m_mics_combo{};

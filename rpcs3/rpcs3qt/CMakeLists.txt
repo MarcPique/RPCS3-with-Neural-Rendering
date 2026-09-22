@@ -70,6 +70,8 @@ add_library(rpcs3_ui STATIC
     movie_item_base.cpp
     msg_dialog_frame.cpp
     music_player_dialog.cpp
+    neural_rendering_config.cpp
+    neural_rendering_tab.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
     pad_motion_settings_dialog.cpp

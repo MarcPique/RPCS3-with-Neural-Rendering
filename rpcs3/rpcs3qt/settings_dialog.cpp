@@ -25,6 +25,7 @@
 #include "microphone_creator.h"
 #include "log_level_dialog.h"
 #include "anaglyph_settings_dialog.h"
+#include "neural_rendering_tab.h"
 
 #include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
@@ -113,6 +114,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->tab_widget_settings->removeTab(8);
 		ui->buttonBox->button(QDialogButtonBox::StandardButton::Save)->setText(tr("Save custom configuration", "Settings dialog"));
 	}
+	else
+	{
+		// Add after the fixed-index removals so existing tabs retain their indices.
+		m_neural_rendering_tab = new neural_rendering_tab(this, []() { return Emu.IsStopped(); });
+		ui->tab_widget_settings->addTab(m_neural_rendering_tab, tr("Neural / ReShade"));
+		ui->tab_widget_settings->setUsesScrollButtons(true);
+	}
 
 	// Localized tooltips
 	const Tooltips tooltips;
@@ -139,6 +147,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state, game](bool do_exit)
 	{
+		if (m_neural_rendering_tab && !m_neural_rendering_tab->save()) return;
+
 		u32 selected_audio_formats = 0;
 		for (int i = 0; i < ui->list_audio_formats->count(); ++i)
 		{

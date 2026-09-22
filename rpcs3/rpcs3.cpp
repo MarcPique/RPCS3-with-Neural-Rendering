@@ -21,6 +21,7 @@
 #include "rpcs3qt/curl_handle.h"
 #include "rpcs3qt/main_window.h"
 #include "rpcs3qt/uuid.h"
+#include "rpcs3qt/neural_rendering_config.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
@@ -804,6 +805,7 @@ int run_rpcs3(int argc, char** argv)
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 	app->setOrganizationName("RPCS3");
+	sys_log.notice("Neural rendering: %s", neural_rendering::initialize().toStdString());
 
 	// Command line args
 	static QCommandLineParser parser;

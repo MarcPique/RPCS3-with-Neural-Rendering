@@ -1320,6 +1320,12 @@
     <ClCompile Include="rpcs3qt\anaglyph_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\neural_rendering_config.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\neural_rendering_tab.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\guest_memory_dumper.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
@@ -1330,6 +1336,12 @@
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
       <Filter>Io\DS4</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\neural_rendering_config.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\neural_rendering_tab.h">
+      <Filter>Gui\settings</Filter>
     </ClInclude>
     <ClInclude Include="Input\xinput_pad_handler.h">
       <Filter>Io\XInput</Filter>

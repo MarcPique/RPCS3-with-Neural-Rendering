@@ -44,7 +44,7 @@ namespace rpcs3
 		const auto last_minus = version.find_last_of('-');
 		version = version.substr(0, last_minus);
 
-		return version;
+		return version + " | Neural / ReShade experimental";
 	}
 
 	std::string get_verbose_version()
@@ -54,6 +54,7 @@ namespace rpcs3
 		{
 			fmt::append(version, " | local_build");
 		}
+		fmt::append(version, " | Neural / ReShade experimental");
 		return version;
 	}
 

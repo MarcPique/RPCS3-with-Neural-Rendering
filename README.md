@@ -1,4 +1,17 @@
-RPCS3
+RPCS3 Neural / ReShade — unofficial experimental fork
+====================================================
+
+[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.0-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
+
+This fork adds a **Neural / ReShade** settings tab, local Vulkan integration, numeric sliders for intensity, tone, structure and skin, and four quick presets: Suave, Equilibrado, Detalle and Cinematográfico. The component selection follows [DLSS5oneclick](https://github.com/faisalkindi/DLSS5oneclick). This is community integration through ReShade/Feeder, not an official NVIDIA DLSS integration or an official RPCS3 release.
+
+Extract `RPCS3-Neural-0.2.0-public-win64.zip`, then run `Setup-Neural.ps1` from PowerShell in that folder to download the neural components from their authors. Start `rpcs3.exe`, select Vulkan and your compatible NVIDIA GPU, then choose **Config → Neural / ReShade → Neural / Feeder → preset → Usar preset → Save** and restart. Activation is off by default. The separate EXE asset requires the dependencies from the ZIP.
+
+The public archive contains the emulator, its redistributable dependencies, licenses and setup scripts. It excludes neural models/add-ons and LumeniteFX; those are downloaded locally because their redistribution is restricted or unverified. Requires Windows x64 and the Microsoft Visual C++ x64 runtime compatible with MSVC 14.51 or later.
+
+**Experimental:** configuration/UI tests, Vulkan device creation, add-on loading and a separate 300-frame neural diagnostic passed on an RTX 4090. No PS3 gameplay, image-quality or performance validation has been completed. [Build tools and pinned dependencies](tools/neural-rendering/README.md) are included; clone with submodules when rebuilding.
+
+RPCS3 (upstream project)
 =====
 
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/RPCS3/rpcs3/rpcs3.yml?branch=master&logo=github&label=Actions)](https://github.com/RPCS3/rpcs3/actions/workflows/rpcs3.yml)

@@ -1,4 +1,5 @@
 #include "render_creator.h"
+#include "neural_rendering_config.h"
 
 #include "Utilities/Thread.h"
 
@@ -15,6 +16,9 @@ LOG_CHANNEL(cfg_log, "CFG");
 
 render_creator::render_creator()
 {
+	// QApplication/QCoreApplication exists, but main_application is still being
+	// constructed. Configure layers before its first Vulkan instance is created.
+	neural_rendering::initialize();
 #if defined(HAVE_VULKAN)
 	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
