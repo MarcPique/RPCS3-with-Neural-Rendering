@@ -168,7 +168,13 @@ int main(int argc, char* argv[])
 			require(intensity_number->value() == 1.37 && intensity_slider->value() == 137, "Raw INI did not synchronize sliders");
 			require(neural_rendering::ini_value(config_editor->toPlainText(), "GENERAL", "EffectSearchPaths") == ".\\new\\**", "Form edits did not update raw INI");
 			config_editor->setPlainText(config_editor->toPlainText() + QStringLiteral("\n[INPUT]\nKeyOverlay=112,0,0,0\n"));
-			require(child<QLineEdit>(tab, "reshade_KeyOverlay")->text() == "112,0,0,0", "Raw INI edits did not update fields");
+			require(!tab.findChild<QLineEdit*>("reshade_KeyOverlay"), "In-game menu shortcut must not be configurable");
+			require(config_editor->isReadOnly(), "Config view should not require editing numbers");
+			for (auto* number : tab.findChildren<QDoubleSpinBox*>())
+			{
+				require(number->isReadOnly(), "Numeric values must be displayed without manual typing");
+				require(tab.findChild<QSlider*>(number->objectName() + "_slider"), "Numeric control is missing its slider");
+			}
 			auto* tabs = child<QTabWidget>(tab, "neural_rendering_editors");
 			tabs->setCurrentIndex(1);
 			auto* uplift = child<QCheckBox>(tab, "renodx_neural_uplift");
@@ -182,12 +188,21 @@ int main(int argc, char* argv[])
 			mode->setFocus();
 			QTest::keyClick(mode, Qt::Key_Down);
 			require(child<QPlainTextEdit>(tab, "neural_feeder_editor")->toPlainText().contains("mode=2"), "Feeder form did not update CFG");
-			auto* delay = child<QSpinBox>(tab, "feeder_create_delay");
+			auto* delay = child<QSlider>(tab, "feeder_create_delay_slider");
 			require(delay->value() == 60 && !child<QPlainTextEdit>(tab, "neural_feeder_editor")->toPlainText().contains("create_delay="), "Spin default wrote an absent key");
 			delay->setValue(75);
 			require(child<QPlainTextEdit>(tab, "neural_feeder_editor")->toPlainText().contains("create_delay=75"), "Spin edit did not update CFG");
+			QString precise = config_editor->toPlainText();
+			neural_rendering::set_ini_value(precise, "RenoDX.DLSS5", "NRPaperWhiteScale", "15.401");
+			config_editor->setPlainText(precise);
+			child<QSlider>(tab, "feeder_mv_scale_x_slider")->setValue(-150);
+			child<QSlider>(tab, "feeder_gpu_timeout_ms_slider")->setValue(2500);
+			require(neural_rendering::ini_value(child<QPlainTextEdit>(tab, "neural_feeder_editor")->toPlainText(), {}, "mv_scale_x") == "-1.50", "Signed movement slider wrote the wrong scale or section");
+			require(neural_rendering::ini_value(child<QPlainTextEdit>(tab, "neural_feeder_editor")->toPlainText(), {}, "gpu_timeout_ms") == "2500", "Integer slider wrote a decimal timeout");
 			require(tab.save(), "Save of valid edits failed");
 			const QString saved = neural_rendering::read_text(neural_rendering::config_path());
+			require(neural_rendering::ini_value(saved, "RenoDX.DLSS5", "NRPaperWhiteScale") == "15.401", "Untouched precise setting was rounded by the slider view");
+			require(neural_rendering::ini_value(saved, "INPUT", "KeyOverlay") == "0,0,0,0", "Saving preserved an in-game menu shortcut");
 			require(saved.contains("; preserve this comment") && saved.contains("FutureOption=42"), "Save dropped comments or unknown add-on keys");
 			require(neural_rendering::read_text(neural_rendering::preset_path()).contains("UnrecognizedUniform=0.25"), "Save changed unknown preset keys");
 			require(neural_rendering::read_text(root.filePath(QStringLiteral("dlss5-feed.cfg"))).contains("unknown_future_setting=7"), "Save lost unknown Feeder keys");

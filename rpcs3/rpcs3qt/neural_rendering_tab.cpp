@@ -113,6 +113,7 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 		editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 		editor->setLineWrapMode(QPlainTextEdit::NoWrap);
 		editor->setMinimumHeight(200);
+		editor->setReadOnly(true);
 	}
 	m_editors->addTab(m_config, QStringLiteral("ReShade.ini"));
 	m_editors->addTab(m_preset, QStringLiteral("ReShadePreset.ini"));
@@ -139,7 +140,7 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 
 	m_performance_mode = new QCheckBox(tr("Compilar efectos en modo rendimiento"), controls);
 	m_performance_mode->setObjectName(QStringLiteral("reshade_PerformanceMode"));
-	m_performance_mode->setToolTip(tr("GENERAL / PerformanceMode. Desactívalo para editar los parámetros de efectos en el overlay de ReShade."));
+	m_performance_mode->setToolTip(tr("GENERAL / PerformanceMode. Compila los efectos con los valores del preset. Los ajustes se controlan desde RPCS3."));
 	form->addRow(m_performance_mode);
 	connect(m_performance_mode, &QCheckBox::toggled, this, [this](bool checked)
 	{
@@ -192,59 +193,46 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 		});
 		return field;
 	};
-	const auto add_integer = [this](QFormLayout* target_form, const QString& title, const QString& key, QPlainTextEdit* editor, int fallback, const QString& tooltip)
-	{
-		auto* field = new QSpinBox(target_form->parentWidget());
-		field->setObjectName(QStringLiteral("feeder_") + key);
-		field->setRange(0, std::numeric_limits<int>::max());
-		field->setKeyboardTracking(false);
-		field->setToolTip(tooltip);
-		target_form->addRow(title, field);
-		m_fields.push_back({field, QString(), key, editor, [field, fallback](const QString& value)
-		{
-			bool ok = false;
-			const int number = value.toInt(&ok);
-			field->setValue(ok ? number : fallback);
-		}});
-		connect(field, &QSpinBox::valueChanged, this, [this, editor, key](int value)
-		{
-			if (!m_refreshing) set_value(editor, QString(), key, QString::number(value));
-		});
-		return field;
-	};
 	const auto add_slider = [this](QFormLayout* target_form, const QString& title, const QString& key,
-		double minimum, double maximum, double fallback)
+		double minimum, double maximum, double fallback, QPlainTextEdit* editor = nullptr,
+		const QString& section = QStringLiteral("RenoDX.DLSS5"), int decimals = 2)
 	{
+		if (!editor) editor = m_config;
+		const QString prefix = editor == m_feeder ? QStringLiteral("feeder_") : QStringLiteral("reshade_");
+		const int scale = decimals == 0 ? 1 : 100;
 		auto* row = new QWidget(target_form->parentWidget());
 		auto* row_layout = new QHBoxLayout(row);
 		row_layout->setContentsMargins(0, 0, 0, 0);
 		auto* slider = new QSlider(Qt::Horizontal, row);
-		slider->setObjectName(QStringLiteral("reshade_") + key + QStringLiteral("_slider"));
+		slider->setObjectName(prefix + key + QStringLiteral("_slider"));
 		slider->setAccessibleName(title);
-		slider->setRange(qRound(minimum * 100), qRound(maximum * 100));
+		slider->setRange(qRound(minimum * scale), qRound(maximum * scale));
 		slider->setPageStep(10);
 		auto* number = new QDoubleSpinBox(row);
-		number->setObjectName(QStringLiteral("reshade_") + key);
+		number->setObjectName(prefix + key);
 		number->setAccessibleName(title);
 		number->setRange(minimum, maximum);
-		number->setDecimals(2);
-		number->setSingleStep(0.01);
+		number->setDecimals(decimals);
+		number->setReadOnly(true);
+		number->setButtonSymbols(QAbstractSpinBox::NoButtons);
+		number->setFocusPolicy(Qt::NoFocus);
+		number->setSingleStep(1.0 / scale);
 		number->setKeyboardTracking(false);
 		number->setMinimumWidth(85);
 		auto* notice = new QLabel(row);
-		notice->setObjectName(QStringLiteral("reshade_") + key + QStringLiteral("_notice"));
+		notice->setObjectName(prefix + key + QStringLiteral("_notice"));
 		row_layout->addWidget(new QLabel(QString::number(minimum, 'f', 2), row));
 		row_layout->addWidget(slider, 1);
 		row_layout->addWidget(new QLabel(QString::number(maximum, 'f', 2), row));
 		row_layout->addWidget(number);
 		row_layout->addWidget(notice);
-		const QString help = tr("Desliza o escribe el valor; paso 0,01. Rango del panel Feeder: %1 a %2. Si la clave no existe, se muestra %3 sin escribirla. Los valores avanzados del INI se conservan hasta editar este control.")
+		const QString help = tr("Arrastra el deslizador. Rango: %1 a %2. Si la clave no existe, se muestra %3 sin escribirla. Los valores avanzados del INI se conservan hasta editar este control.")
 			.arg(minimum, 0, 'f', 2).arg(maximum, 0, 'f', 2).arg(fallback, 0, 'f', 2);
 		slider->setToolTip(help);
 		number->setToolTip(help);
 		target_form->addRow(title, row);
-		m_fields.push_back({row, QStringLiteral("RenoDX.DLSS5"), key, m_config,
-			[slider, number, notice, minimum, maximum, fallback](const QString& value)
+		m_fields.push_back({row, section, key, editor,
+			[slider, number, notice, minimum, maximum, fallback, scale](const QString& value)
 			{
 				const QSignalBlocker slider_blocker(slider), number_blocker(number);
 				bool ok = false;
@@ -253,37 +241,38 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 				const double shown = ok ? parsed : fallback;
 				number->setRange(std::min(minimum, shown), std::max(maximum, shown));
 				number->setValue(shown);
-				slider->setValue(qRound(std::clamp(shown, minimum, maximum) * 100));
+				slider->setValue(qRound(std::clamp(shown, minimum, maximum) * scale));
 				notice->setText(value.isEmpty() ? QString() : !ok ? QObject::tr("INI no numérico") :
 					(shown < minimum || shown > maximum) ? QObject::tr("Fuera de rango") : QString());
 				notice->setToolTip(value);
 				notice->setVisible(!notice->text().isEmpty());
 			}});
-		connect(slider, &QSlider::valueChanged, this, [this, number, notice, key, minimum, maximum](int value)
+		connect(slider, &QSlider::valueChanged, this, [this, number, notice, key, minimum, maximum, editor, section, scale, decimals](int value)
 		{
 			if (m_refreshing) return;
 			const QSignalBlocker blocker(number);
 			number->setRange(minimum, maximum);
-			number->setValue(value / 100.0);
+			number->setValue(value / static_cast<double>(scale));
 			notice->hide();
-			set_value(m_config, QStringLiteral("RenoDX.DLSS5"), key, QString::number(value / 100.0, 'f', 2));
+			set_value(editor, section, key, QString::number(value / static_cast<double>(scale), 'f', decimals));
 		});
-		connect(number, &QDoubleSpinBox::valueChanged, this, [this, slider, notice, key, minimum, maximum](double value)
+		connect(number, &QDoubleSpinBox::valueChanged, this, [this, slider, notice, key, minimum, maximum, editor, section, scale, decimals](double value)
 		{
 			if (m_refreshing) return;
 			const QSignalBlocker blocker(slider);
-			slider->setValue(qRound(std::clamp(value, minimum, maximum) * 100));
+			slider->setValue(qRound(std::clamp(value, minimum, maximum) * scale));
 			notice->setText(value < minimum || value > maximum ? tr("Fuera de rango") : QString());
 			notice->setVisible(!notice->text().isEmpty());
-			set_value(m_config, QStringLiteral("RenoDX.DLSS5"), key, QString::number(value, 'f', 2));
+			set_value(editor, section, key, QString::number(value, 'f', decimals));
 		});
 	};
+	auto* menu_help = new QLabel(tr("Menú dentro del juego bloqueado: usa estos ajustes. Al desactivar la integración, guarda y reinicia RPCS3 para dejar de cargar sus componentes."), controls);
+	menu_help->setWordWrap(true);
+	form->addRow(menu_help);
 	const QString list_help = tr("Lista de ReShade separada por comas. Una coma literal se escribe como dos comas. Se conservan las claves desconocidas y los parámetros de los add-ons.");
 	add_field(form, tr("Carpetas de efectos"), QStringLiteral("GENERAL"), QStringLiteral("EffectSearchPaths"), m_config, list_help);
 	add_field(form, tr("Carpetas de texturas"), QStringLiteral("GENERAL"), QStringLiteral("TextureSearchPaths"), m_config, list_help);
 	add_field(form, tr("Definiciones globales"), QStringLiteral("GENERAL"), QStringLiteral("PreprocessorDefinitions"), m_config, list_help);
-	add_field(form, tr("Tecla del overlay"), QStringLiteral("INPUT"), QStringLiteral("KeyOverlay"), m_config, tr("Formato de ReShade: tecla virtual, Ctrl, Shift, Alt. Inicio/Home: 36,0,0,0."));
-	add_field(form, tr("Tecla para alternar efectos"), QStringLiteral("INPUT"), QStringLiteral("KeyEffects"), m_config, tr("Formato de ReShade: tecla virtual, Ctrl, Shift, Alt. 0,0,0,0 desactiva el atajo."));
 	add_field(form, tr("Carpeta de capturas"), QStringLiteral("SCREENSHOT"), QStringLiteral("SavePath"), m_config, tr("Ruta de las capturas de ReShade, relativa a la carpeta de RPCS3 o absoluta."));
 	add_field(form, tr("Técnicas activas del preset"), QString(), QStringLiteral("Techniques"), m_preset, list_help + tr(" Cada técnica usa el formato Nombre@Archivo.fx."));
 	add_field(form, tr("Orden de las técnicas"), QString(), QStringLiteral("TechniqueSorting"), m_preset, list_help);
@@ -292,7 +281,7 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 	m_preset_notice = new QLabel(controls);
 	m_preset_notice->setWordWrap(true);
 	form->addRow(m_preset_notice);
-	auto* raw_help = new QLabel(tr("Los editores INI permiten cambiar todos los ajustes persistidos en estos archivos por ReShade y por los add-ons, incluidas sus secciones de neural rendering. La disponibilidad de cada opción depende del add-on instalado. Usa Aplicar o Guardar para guardar; cerrar esta ventana descarta los cambios pendientes."), controls);
+	auto* raw_help = new QLabel(tr("Las vistas INI muestran la configuración completa. No necesitas escribir números: usa los deslizadores y selectores de Neural / Feeder. La disponibilidad de cada opción depende del add-on instalado. Usa Aplicar o Guardar para guardar; cerrar esta ventana descarta los cambios pendientes."), controls);
 	raw_help->setWordWrap(true);
 	form->addRow(raw_help);
 
@@ -401,40 +390,32 @@ neural_rendering_tab::neural_rendering_tab(QWidget* parent, std::function<bool()
 	add_slider(feeder_form, tr("Tono local"), QStringLiteral("NRLocalTone"), 0.0, 2.0, 1.0);
 	add_slider(feeder_form, tr("Estructura local"), QStringLiteral("NRLocalStructure"), 0.0, 2.0, 1.0);
 	add_slider(feeder_form, tr("Estructura de piel"), QStringLiteral("NRSkinStructure"), -1.0, 1.0, -1.0);
-	add_field(feeder_form, tr("Hooks de RenoDX"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("EnableHooks"), m_config, tr("DLSS5oneclick usa EnableHooks=2 para el Feeder."));
+	add_combo(feeder_form, tr("Hooks de RenoDX"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("EnableHooks"), m_config, {{0, tr("Desactivados")}, {1, tr("Completos")}, {2, tr("NGX / Feeder")}}, tr("La integración Vulkan usa NGX / Feeder."));
 	add_combo(feeder_form, tr("Reescalado de RenoDX"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NREnableUpscaling"), m_config, {{0, tr("Desactivado")}, {1, tr("Activado")}}, tr("NREnableUpscaling controla el reescalado del add-on. La integración Vulkan usa 0 de forma predeterminada."));
-	const auto nr_field = [this, &add_field, feeder_form](const QString& label, const QString& key, const QString& help)
-	{
-		return add_field(feeder_form, label, QStringLiteral("RenoDX.DLSS5"), key, m_config, help);
-	};
 	add_combo(feeder_form, tr("Preset neural"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NRPreset"), m_config, {{0, tr("Predeterminado")}, {1, tr("Preset 1")}, {2, tr("Preset 2")}, {3, tr("Preset 3")}}, tr("Presets del modelo instalado."));
 	add_combo(feeder_form, tr("Estilo neural"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NRStyle"), m_config, {{0, tr("Predeterminado")}, {1, tr("Natural")}, {2, tr("Cinematográfico")}}, tr("El modo cinematográfico tiene un fallo conocido en algunas versiones 4.6 y posteriores."));
 	add_combo(feeder_form, tr("Máscara automática"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NRAutoMask"), m_config, {{0, tr("Desactivada")}, {1, tr("Activada")}}, tr("Control de máscara automática del modelo."));
 	add_combo(feeder_form, tr("Corrección de interfaz"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NRUICorrection"), m_config, {{0, tr("Desactivada")}, {1, tr("Activada")}}, tr("Control de protección/corrección de la interfaz del add-on."));
-	nr_field(tr("Escala de blanco de referencia"), QStringLiteral("NRPaperWhiteScale"), tr("Rango orientativo 0 a 10; valor observado 1."));
-	nr_field(tr("Intensidad de transferencia"), QStringLiteral("NRTransferStrength"), tr("Rango orientativo 0 a 1."));
-	nr_field(tr("Intensidad de color"), QStringLiteral("NRColorStrength"), tr("Rango orientativo 0 a 1."));
+	add_slider(feeder_form, tr("Escala de blanco de referencia"), QStringLiteral("NRPaperWhiteScale"), 0.0, 20.0, 1.0);
+	add_slider(feeder_form, tr("Intensidad de transferencia"), QStringLiteral("NRTransferStrength"), 0.0, 1.0, 1.0);
+	add_slider(feeder_form, tr("Intensidad de color"), QStringLiteral("NRColorStrength"), 0.0, 1.0, 1.0);
 	add_combo(feeder_form, tr("Modo de profundidad neural"), QStringLiteral("RenoDX.DLSS5"), QStringLiteral("NRDepthMode"), m_config, {{0, tr("Flag NGX")}, {1, tr("Normal")}, {2, tr("Invertida")}}, tr("Interpretación de profundidad del add-on."));
-	nr_field(tr("Escala neural de movimiento X"), QStringLiteral("NRMVecScaleX"), tr("Rango orientativo 0 a 4; valor observado 1."));
-	nr_field(tr("Escala neural de movimiento Y"), QStringLiteral("NRMVecScaleY"), tr("Rango orientativo 0 a 4; valor observado 1."));
+	add_slider(feeder_form, tr("Escala neural de movimiento X"), QStringLiteral("NRMVecScaleX"), 0.0, 4.0, 1.0);
+	add_slider(feeder_form, tr("Escala neural de movimiento Y"), QStringLiteral("NRMVecScaleY"), 0.0, 4.0, 1.0);
 	auto* feeder_help = new QLabel(tr("Los valores predeterminados no se escriben hasta que cambies un control. Los rangos de RenoDX son orientativos y dependen de su versión. RenoDX 4.55 no incluye los controles de tono global ni blanco difuso de 4.7. El editor conserva cualquier clave adicional. La reducción de resolución del Feeder es exclusiva de D3D11 y no se aplica a Vulkan."), feeder_controls);
 	feeder_help->setWordWrap(true);
 	feeder_form->addRow(feeder_help);
-	const auto feeder_field = [this, &add_field, feeder_form](const QString& label, const QString& key, const QString& help)
-	{
-		return add_field(feeder_form, label, QString(), key, m_feeder, help);
-	};
 	add_combo(feeder_form, tr("Feeder"), QString(), QStringLiteral("enabled"), m_feeder, {{0, tr("Desactivado")}, {1, tr("Activado")}}, tr("Activación del transporte del Feeder."));
 	add_combo(feeder_form, tr("Modo del Feeder"), QString(), QStringLiteral("mode"), m_feeder, {{0, tr("Inactivo")}, {1, tr("Solo transporte")}, {2, tr("DLSS completo")}}, tr("Modo de evaluación del Feeder."));
 	add_combo(feeder_form, tr("HDR"), QString(), QStringLiteral("hdr"), m_feeder, {{-1, tr("Automático")}, {0, tr("SDR")}, {1, tr("HDR")}}, tr("Interpretación del espacio de color."));
 	add_combo(feeder_form, tr("Profundidad invertida"), QString(), QStringLiteral("depth_inverted"), m_feeder, {{-1, tr("Automática")}, {0, tr("Normal")}, {1, tr("Invertida")}}, tr("Interpretación del búfer de profundidad."));
 	add_combo(feeder_form, tr("Preset DLSS"), QString(), QStringLiteral("preset"), m_feeder, {{0, tr("Automático")}, {5, tr("E")}, {6, tr("F")}, {10, tr("J")}, {11, tr("K")}}, tr("Preset del modelo DLSS."));
 	add_combo(feeder_form, tr("Sincronización Vulkan"), QString(), QStringLiteral("vk_present_sync"), m_feeder, {{0, tr("Desactivada")}, {1, tr("Activada")}}, tr("Sincronización de presentación de Vulkan."));
-	add_integer(feeder_form, tr("Retardo de creación (fotogramas)"), QStringLiteral("create_delay"), m_feeder, 60, tr("Retardo inicial del Feeder; valor predeterminado 60 fotogramas."));
-	add_integer(feeder_form, tr("Calentamiento (fotogramas)"), QStringLiteral("warmup_rebuild"), m_feeder, 180, tr("Fotogramas antes de reconstruir la evaluación; valor predeterminado 180."));
-	add_integer(feeder_form, tr("Tiempo límite de GPU (ms)"), QStringLiteral("gpu_timeout_ms"), m_feeder, 2000, tr("Tiempo de espera de la GPU; valor predeterminado 2000 milisegundos."));
-	feeder_field(tr("Escala de movimiento X"), QStringLiteral("mv_scale_x"), tr("Multiplicador horizontal de vectores de movimiento; 1.0 conserva la escala."));
-	feeder_field(tr("Escala de movimiento Y"), QStringLiteral("mv_scale_y"), tr("Multiplicador vertical de vectores de movimiento; 1.0 conserva la escala."));
+	add_slider(feeder_form, tr("Retardo de creación (fotogramas)"), QStringLiteral("create_delay"), 0, 600, 60, m_feeder, QString(), 0);
+	add_slider(feeder_form, tr("Calentamiento (fotogramas)"), QStringLiteral("warmup_rebuild"), 0, 1800, 180, m_feeder, QString(), 0);
+	add_slider(feeder_form, tr("Tiempo límite de GPU (ms)"), QStringLiteral("gpu_timeout_ms"), 0, 10000, 2000, m_feeder, QString(), 0);
+	add_slider(feeder_form, tr("Escala de movimiento X"), QStringLiteral("mv_scale_x"), -4.0, 4.0, 1.0, m_feeder, QString());
+	add_slider(feeder_form, tr("Escala de movimiento Y"), QStringLiteral("mv_scale_y"), -4.0, 4.0, 1.0, m_feeder, QString());
 
 	connect(m_config, &QPlainTextEdit::textChanged, this, [this]() { if (!m_refreshing) refresh_fields(); });
 	connect(m_preset, &QPlainTextEdit::textChanged, this, [this]() { if (!m_refreshing) refresh_fields(); });
@@ -677,7 +658,7 @@ bool neural_rendering_tab::save()
 		prompt.exec();
 		if (prompt.clickedButton() != download || !install_components()) return false;
 	}
-	const QString config = m_config->toPlainText();
+	QString config = m_config->toPlainText();
 	const QString preset = m_preset->toPlainText();
 	const QString feeder = m_feeder->toPlainText();
 	const bool enabled = m_enabled->isChecked();
@@ -742,6 +723,7 @@ bool neural_rendering_tab::save()
 	};
 	if (write_config)
 	{
+		config = neural_rendering::settings_only_config(config);
 		if (!neural_rendering::write_text(neural_rendering::config_path(), config, &error)) return show_error(error);
 		config_saved = true;
 	}
@@ -768,6 +750,9 @@ bool neural_rendering_tab::save()
 		rollback(error);
 		return show_error(error);
 	}
+	m_refreshing = true;
+	m_config->setPlainText(config);
+	m_refreshing = false;
 	m_original_config = config;
 	m_original_preset = preset;
 	m_original_feeder = feeder;

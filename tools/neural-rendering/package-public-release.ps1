@@ -13,11 +13,11 @@ $package = [IO.Path]::GetFullPath($PackageDirectory)
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $package) { throw 'PackageDirectory must not already exist.' }
 $forbidden = Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object {
-    $_.Name -match '^(ReShade64|nvngx.*|VkLayer_feed_vk)\.dll$|\.addon(32|64)$|\.(fx|fxh|log|pdb)$' -or
+    ($_.Name -match '^(ReShade64|nvngx.*|VkLayer_feed_vk)\.dll$|\.addon(32|64)$|\.(fx|fxh|log|pdb)$' -and $_.Name -ne 'rpcs3-settings-only.addon64') -or
     $_.Name -in @('ReShade.ini','ReShadePreset.ini','dlss5-feed.cfg','neural-rendering.json','CurrentSettings.ini')
 }
 if ($forbidden) { throw 'CleanStage contains runtime components, user settings or debug files.' }
-foreach ($required in @('rpcs3.exe','opencv_world4140.dll','Qt6Core.dll','Qt6Gui.dll','Qt6Widgets.dll','Qt6Network.dll',
+foreach ($required in @('rpcs3.exe','rpcs3-settings-only.addon64','THIRD-PARTY-NOTICES/ReShade-SDK/LICENSE.md','opencv_world4140.dll','Qt6Core.dll','Qt6Gui.dll','Qt6Widgets.dll','Qt6Network.dll',
     'Qt6Multimedia.dll','Qt6MultimediaWidgets.dll','Qt6Svg.dll','Qt6SvgWidgets.dll','Qt6Concurrent.dll',
     'avcodec-61.dll','avformat-61.dll','avutil-59.dll','swresample-5.dll','swscale-8.dll','qt6/plugins/platforms/qwindows.dll')) {
     if (-not (Test-Path -LiteralPath (Join-Path $stage $required) -PathType Leaf)) { throw "Missing release dependency: $required" }
@@ -51,7 +51,7 @@ foreach ($provenanceFile in Get-ChildItem -LiteralPath (Join-Path $package 'THIR
 }
 $exe = Join-Path $package 'rpcs3.exe'
 $buildInfo = [ordered]@{
-    release = 'v0.2.1-neural'
+    release = 'v0.2.2-neural'
     source = "https://github.com/MarcPique/rpcs3-neural/tree/$sourceCommit"
     sourceCommit = $sourceCommit
     upstreamBase = '8db660b185496f115701ef4c77c1ca2bef60e422'
@@ -60,17 +60,17 @@ $buildInfo = [ordered]@{
     notes = 'The executable was built before the release commit. The tagged source includes the compiled changes plus release documentation and tools.'
 }
 $buildInfo | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $package 'BUILD-INFO.json') -Encoding utf8
-$zip = Join-Path $output 'RPCS3-Neural-0.2.1-public-win64.zip'
+$zip = Join-Path $output 'RPCS3-Neural-0.2.2-public-win64.zip'
 if (Test-Path -LiteralPath $zip) { throw 'Output ZIP already exists.' }
 [IO.Compression.ZipFile]::CreateFromDirectory($package, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
-$selfExtracting = Join-Path $output 'Extraer-RPCS3-Neural-0.2.1-win64.exe'
+$selfExtracting = Join-Path $output 'Extraer-RPCS3-Neural-0.2.2-win64.exe'
 if (Test-Path -LiteralPath $selfExtracting) { throw 'Self-extracting EXE already exists.' }
 Push-Location (Split-Path $package -Parent)
 try {
     & (Join-Path $SevenZipDirectory '7z.exe') a -t7z '-mx=5' ('-sfx' + (Join-Path $SevenZipDirectory '7z.sfx')) $selfExtracting (Split-Path $package -Leaf)
     if ($LASTEXITCODE -ne 0) { throw 'Self-extracting archive creation failed.' }
 } finally { Pop-Location }
-$sums = foreach ($name in @('RPCS3-Neural-0.2.1-public-win64.zip','Extraer-RPCS3-Neural-0.2.1-win64.exe')) {
+$sums = foreach ($name in @('RPCS3-Neural-0.2.2-public-win64.zip','Extraer-RPCS3-Neural-0.2.2-win64.exe')) {
     $hash = (Get-FileHash -LiteralPath (Join-Path $output $name) -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $name"
 }

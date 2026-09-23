@@ -1,40 +1,32 @@
-# Validación — RPCS3 Neural / ReShade 0.2.1 experimental
+# Validación — RPCS3 Neural / ReShade 0.2.2 experimental
 
-Fecha: 22 de septiembre de 2026. Paquete local Windows x64.
-
+Fecha: 23 de septiembre de 2026. Windows x64, RTX 4090.
 Base RPCS3: `8db660b185496f115701ef4c77c1ca2bef60e422` (0.0.42).
-Ejecutable SHA256: `f576ceb0ab4bda5a395d2e6f2d31e0908fecba89709e52c57bb5e4cfe8a4583e`.
+El hash del ejecutable y el commit se registran en `BUILD-INFO.json` dentro del paquete; `SHA256SUMS.txt` identifica las descargas.
 
-## Corrección 0.2.1
+## Cambios y pruebas 0.2.2
 
-- Compilación final Release x64: 0 errores y 0 advertencias.
-- Las dos suites Qt (`neural-rendering-ui` y `neural-rendering-download`) pasaron. Las nuevas pruebas ejecutan un instalador local simulado, sin red, para verificar scripts ausentes, salida de error, descarga incompleta, cancelación, activación automática desde la casilla, conservación de cambios pendientes, guardado posterior y bloqueo durante emulación.
-- En el ejecutable RPCS3 real se completó la instalación con el emulador abierto, usando las descargas almacenadas en caché y las consultas a los autores. Se verificaron 32 hashes instalados. Antes de pulsar Save no se había creado ReShade.ini y la activación seguía desmarcada en disco; Save creó los ajustes y guardó la activación correctamente.
-- Se inspeccionaron las importaciones de los 42 EXE/DLL del paquete. Se resuelven en el paquete o Windows/System32, con el runtime Visual C++ de esta máquina. OpenCV, Qt y FFmpeg están incluidos. Esto no sustituye una prueba en otro Windows sin Visual C++ instalado.
-- Se ofrece un EXE autoextraíble con todas las dependencias, además del ZIP completo. Se retira el EXE del emulador suelto del release anterior para evitar ejecutarlo sin sus DLL.
+- El complemento propio `rpcs3-settings-only.addon64` veta la apertura del menú mediante teclado, mando y API. Permite cerrar el menú. No modifica la evaluación de efectos.
+- Prueba de carga del DLL real con ABI ReShade simulado: registro con versión correcta, veto de todas las fuentes de entrada, cierre permitido, registro limitado a un mensaje y descarga limpia. No equivale a pulsar un mando físico dentro de un juego.
+- Prueba Vulkan aislada con ReShade 6.8.0 real: el registro confirma que se carga el complemento propio y se activa el bloqueo; creación de dispositivo NVIDIA correcta (`VK_SUCCESS`). No crea swapchain ni evalúa fotogramas.
+- Pruebas de configuración: elimina los atajos del menú y de efectos, fija la carpeta de complementos local, impide deshabilitar el complemento de bloqueo y conserva el resto de claves/listas escapadas. Verifica que la integración apagada bloquea las capas Vulkan locales y globales solo en este proceso.
+- Pruebas Qt de interfaz y descargador aprobadas. Todos los parámetros numéricos del panel Neural / Feeder tienen slider y valor de solo lectura; los modos usan selectores. Los INI/CFG son vistas de solo lectura. Se verifican valores ausentes, fuera de rango, precisión existente, números enteros y negativos, cuatro presets, cancelar, aplicar varias veces, cambios externos y bloqueo durante emulación.
+- El paquete incluye las DLL de OpenCV, Qt y FFmpeg, además del complemento propio de bloqueo. El ZIP y el EXE autoextraíble contienen el mismo conjunto de archivos. Los modelos, complementos neurales y shaders de terceros se descargan desde sus autores con el botón integrado.
 
-Las comprobaciones siguientes se realizaron durante el desarrollo 0.2.0. Se mantienen los mismos componentes neurales; las pruebas Qt se han vuelto a ejecutar con 0.2.1.
+## Sesión de Saw II antes de esta corrección
 
-## Resultados
+Se inició Saw II (BLES01050) con la versión 0.2.1 y se alcanzó una escena jugable con Vulkan y salida 3840×2160 en una RTX 4090. El registro confirmó compilación de Lumenite/Feeder y creación/evaluaciones satisfactorias de la función neural 18. La ventana rondó los 30 FPS durante esa sesión.
 
-- **Compilación Release x64:** proyecto RPCS3 y dependencias completados con MSVC 14.51, Qt 6.11.2 y LLVM 22.1.8. Última compilación: 0 errores y 0 advertencias. La solución completa intentó ejecutar un proyecto de pruebas upstream sin GoogleTest; ese conjunto de pruebas no se ha ejecutado. El script entregado compila el objetivo `rpcs3`.
-- **Configuración:** 46 comprobaciones aprobadas. Lectura/escritura INI, BOM/CRLF, conservación de claves, duplicados, manifiestos, rutas y variables Vulkan.
-- **Deslizadores y presets 0.2.0:** pruebas aprobadas de sincronización slider/entrada numérica/INI, valores ausentes, fuera de rango o no numéricos; cuatro presets; conservación de listas escapadas, rutas y efectos personalizados; cancelación sin escrituras. El preset Detalle también se aplicó y guardó desde el ejecutable real; se verificaron intensidad 1,00, tono 1,05, estructura 1,35 y piel 0,25 en el INI. Los presets son puntos de partida, no calibraciones de juegos.
-- **Interfaz Qt:** pruebas aprobadas de cancelar, sincronizar controles y editores, aplicar varias veces, detectar cambios externos y errores de lectura, bloquear edición durante emulación y validar componentes incompletos.
-- **Interfaz del emulador:** arranque real de RPCS3, apertura de Config → Neural / ReShade, inspección de controles ReShade y Neural / Feeder y guardado de activación en `neural-rendering.json`.
-- **Activación en el ejecutable final:** con `enabled=false` no se cargaron módulos ReShade/Feeder ni se creó ReShade.log; con `enabled=true`, ReShade.log confirmó la DLL de esta copia portable y el registro de los complementos DLSS 5 Feed y DLSS 5 Neural Rendering. Se corrigió la inicialización para ejecutarse antes de la primera enumeración Vulkan.
-- **Vulkan real:** capas locales descubiertas, RTX 4090 detectada, extensiones de memoria/semaforización compartida disponibles y `vkCreateDevice=VK_SUCCESS`. Esta prueba no crea un swapchain ni evalúa fotogramas de un juego.
-- **Evaluación neural real independiente:** `dlss5-feed-host64.exe --test`, en una carpeta de prueba separada, completó **300/300 evaluaciones** a 640×360. Su registro ReShade confirmó creación y evaluación de la función neural 18. Es una prueba sintética D3D12 del runtime; no equivale a una sesión RPCS3.
-- **Instalador público:** instalación y reinstalación con Windows PowerShell 5.1 aprobadas. Se verificaron los hashes de 32 archivos instalados y la conservación de los cuatro archivos de ajustes, incluyendo cambios personalizados. Se probó una descarga HTTP nueva además de reutilizar la caché para los archivos grandes. El script no ejecutó componentes descargados y eliminó su carpeta temporal.
+Esto demuestra que hubo evaluación neural en ese entorno, no que todos los presets mejoren la imagen. No se completó una comparación visual controlada activado/desactivado: el usuario decidió hacer personalmente esa comparación y las pruebas de modos. No se certifican calidad de profundidad/movimiento, HUD, estabilidad prolongada ni compatibilidad con otros juegos/GPU. Algunas muestras de profundidad del registro fueron planas y requieren revisión en más escenas.
 
-Máquina: NVIDIA GeForce RTX 4090, controlador 616.56; también hay una GPU AMD integrada. La carga local convive con ReShade instalado globalmente porque esta copia desactiva la capa global únicamente dentro de su proceso.
+## Comprobaciones anteriores conservadas
 
-## Pendiente
+En 0.2.1 se completó una instalación real desde RPCS3 abierto y se verificaron 32 hashes descargados, conservación de ajustes y guardado posterior. Las pruebas simuladas cubren fallo, cancelación, descarga incompleta y reintento. También se comprobó la extracción del EXE completo y la resolución de dependencias del paquete.
 
-**No se ha ejecutado un juego de PS3.** No se han certificado la cadena completa de presentación Vulkan → ReShade → Feeder → neural en un juego, la compilación de sus efectos durante esa sesión, la calidad de profundidad/movimiento, la corrección del HUD, la estabilidad prolongada ni el rendimiento en juegos. No se incluyen firmware ni juegos. No se promete compatibilidad de otros controladores o GPU.
+Una prueba independiente del runtime D3D12 completó 300/300 evaluaciones a 640×360; no se utiliza como sustituto de una sesión RPCS3. No se ejecutó el conjunto de pruebas upstream de toda la solución; el objetivo compilado es `rpcs3`.
 
 ## Uso
 
-Extrae el paquete completo, abre `rpcs3.exe`, selecciona Vulkan y la GPU NVIDIA, y usa **Config → Neural / ReShade → Descargar / reparar componentes**. Marcar la casilla de activación también inicia la descarga si faltan archivos. Guarda y reinicia. El paquete empieza con la carga desactivada. Consulta `LEEME.md` en el ZIP o `NEURAL_RENDERING.md` en el repositorio para los ajustes, controles avanzados y licencias.
+Extrae el paquete completo y abre `rpcs3.exe`. Selecciona Vulkan y tu GPU NVIDIA. En **Ajustes → Neural / ReShade**, descarga los componentes, elige un preset si lo deseas y guarda. Para activar o desactivar completamente la integración, guarda y reinicia RPCS3. El menú ReShade no está disponible dentro del juego, incluso con la integración activada.
 
-Es una compilación independiente y experimental. El release público excluye los componentes neurales con redistribución restringida o no verificada; el descargador los obtiene de sus autores para uso local. El código de la integración, pruebas y scripts está en este fork.
+La compilación es independiente y experimental. Requiere el runtime Visual C++ x64 compatible con MSVC 14.51 o posterior. No incluye firmware ni juegos. No se publican registros ni ajustes personales de la máquina de prueba.

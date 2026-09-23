@@ -42,6 +42,12 @@ int main(int argc, char** argv)
 	set_ini_value(blank, "GENERAL", "PerformanceMode", "0");
 	check(ini_value(blank, "", "Techniques") == "A" && ini_value(blank, "GENERAL", "PerformanceMode") == "0", "construct empty config");
 	check(ini_value(default_config(), "ADDON", "AddonPath") == ".\\", "default addon path");
+	const QString guarded = settings_only_config("[INPUT]\nKeyOverlay=36,0,0,0\n[ADDON]\nAddonPath=elsewhere\nDisabledAddons=Other,,Name,RPCS3 Settings Only,Other@rpcs3-settings-only.addon64,Keep@other.addon64\n[RenoDX.DLSS5]\nNRPaperWhiteScale=15.401\n");
+	check(ini_value(guarded, "INPUT", "KeyOverlay") == "0,0,0,0", "overlay shortcut is removed");
+	check(ini_value(guarded, "ADDON", "AddonPath") == ".\\", "guard loads from portable directory");
+	check(ini_value(guarded, "ADDON", "DisabledAddons") == "Other,,Name,Keep@other.addon64", "guard cannot be disabled; unrelated escaped entries survive");
+	check(ini_value(guarded, "RenoDX.DLSS5", "NRPaperWhiteScale") == "15.401", "menu policy preserves neural settings");
+	check(settings_only_config(guarded) == guarded, "menu policy is idempotent");
 	check(ini_value(default_config(), "RenoDX.DLSS5", "NeuralUplift") == "1" &&
 		ini_value(default_config(), "RenoDX.DLSS5", "NREnableUpscaling") == "0" &&
 		ini_value(default_config(), "RenoDX.DLSS5", "EnableHooks") == "2", "default neural consumer uses enabled NGX-only DLAA contract");
@@ -62,6 +68,7 @@ int main(int argc, char** argv)
 	for (const QString& name : {
 		QStringLiteral("ReShade64.dll"), QStringLiteral("neural-rendering/VkLayer_feed_vk.dll"),
 		QStringLiteral("dlss5-feed.addon64"), QStringLiteral("renodx-dlss5.addon64"),
+		QStringLiteral("rpcs3-settings-only.addon64"),
 		QStringLiteral("nvngx_dlssnr.dll"), QStringLiteral("nvngx_dlss.dll"),
 		QStringLiteral("reshade-shaders/Shaders/ReShade.fxh"),
 		QStringLiteral("reshade-shaders/Shaders/DLSS5_Feed.fx"),

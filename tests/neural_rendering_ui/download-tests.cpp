@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 	const QDir root(neural_rendering::root_path());
 	const QStringList files{"Setup-Neural.ps1", "fetch-neural-runtime.ps1", "neural-install.log", "neural-install.log.rpcs3-backup",
 		"ReShade.ini", "ReShade.ini.rpcs3-backup", "ReShadePreset.ini", "dlss5-feed.cfg", "neural-rendering.json",
-		"ReShade64.dll", "dlss5-feed.addon64", "renodx-dlss5.addon64", "nvngx_dlssnr.dll", "nvngx_dlss.dll",
+		"ReShade64.dll", "dlss5-feed.addon64", "renodx-dlss5.addon64", "nvngx_dlssnr.dll", "nvngx_dlss.dll", "rpcs3-settings-only.addon64",
 		"neural-rendering/ReShade64.json", "neural-rendering/VkLayer_feed_vk.json", "neural-rendering/VkLayer_feed_vk.dll",
 		"reshade-shaders/Shaders/ReShade.fxh", "reshade-shaders/Shaders/DLSS5_Feed.fx", "reshade-shaders/Shaders/lumenite_Kernel.fx"};
 	for (const QString& file : files) if (QFileInfo::exists(root.filePath(file))) return 2;

@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath $PackageDirectory).Path
 $missing = [Collections.Generic.List[string]]::new()
 $count = 0
-foreach ($binary in Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object { $_.Extension -in @('.dll','.exe') }) {
+foreach ($binary in Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object { $_.Extension -in @('.dll','.exe','.addon64') }) {
     $imports = & $DumpbinPath /nologo /dependents $binary.FullName
     if ($LASTEXITCODE -ne 0) { throw "Cannot inspect $($binary.Name)" }
     foreach ($line in $imports) {

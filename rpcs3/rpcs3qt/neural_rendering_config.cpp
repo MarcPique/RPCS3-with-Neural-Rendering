@@ -236,7 +236,8 @@ QString default_config()
 		"PreprocessorDefinitions=DLSS5_MV_PROVIDER=3\n"
 		"PerformanceMode=0\n\n"
 		"[ADDON]\nAddonPath=.\\\n\n"
-		"[INPUT]\nKeyOverlay=36,0,0,0\nKeyEffects=0,0,0,0\n\n"
+		"[INPUT]\nKeyOverlay=0,0,0,0\nKeyEffects=0,0,0,0\n\n"
+		"[OVERLAY]\nTutorialProgress=4\n\n"
 		"[SCREENSHOT]\nSavePath=.\\screenshots\n\n"
 		"[RenoDX.DLSS5]\nNeuralUplift=1\nNREnableUpscaling=0\nEnableHooks=2\n");
 }
@@ -247,6 +248,32 @@ QString default_preset()
 		"Techniques=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx\n"
 		"TechniqueSorting=Lumenite_Kernel@lumenite_Kernel.fx,DLSS5_Feed@DLSS5_Feed.fx\n"
 		"PreprocessorDefinitions=DLSS5_MV_PROVIDER=3\n");
+}
+
+QString settings_only_config(QString text)
+{
+	set_ini_value(text, "INPUT", "KeyOverlay", "0,0,0,0");
+	set_ini_value(text, "INPUT", "KeyEffects", "0,0,0,0");
+	set_ini_value(text, "OVERLAY", "TutorialProgress", "4");
+	set_ini_value(text, "ADDON", "AddonPath", ".\\");
+	// ReShade list values escape a literal comma by doubling it.
+	const QString disabled = ini_value(text, "ADDON", "DisabledAddons");
+	QStringList entries;
+	QString entry;
+	for (qsizetype i = 0; i <= disabled.size(); ++i)
+	{
+		if (i < disabled.size() && disabled[i] != ',') entry += disabled[i];
+		else if (i + 1 < disabled.size() && disabled[i + 1] == ',') { entry += ','; ++i; }
+		else
+		{
+			if (!entry.isEmpty() && entry != "RPCS3 Settings Only" &&
+				entry.section('@', -1).compare("rpcs3-settings-only.addon64", Qt::CaseInsensitive) != 0)
+				entries.append(entry.replace(",", ",,"));
+			entry.clear();
+		}
+	}
+	set_ini_value(text, "ADDON", "DisabledAddons", entries.join(','));
+	return text;
 }
 
 bool enabled()
@@ -284,6 +311,7 @@ QString validate_runtime(const QString& directory)
 		QStringLiteral("ReShade64.dll"), QStringLiteral("neural-rendering/ReShade64.json"),
 		QStringLiteral("neural-rendering/VkLayer_feed_vk.dll"), QStringLiteral("neural-rendering/VkLayer_feed_vk.json"),
 		QStringLiteral("dlss5-feed.addon64"), QStringLiteral("renodx-dlss5.addon64"),
+		QStringLiteral("rpcs3-settings-only.addon64"),
 		QStringLiteral("nvngx_dlssnr.dll"), QStringLiteral("nvngx_dlss.dll"),
 		QStringLiteral("reshade-shaders/Shaders/ReShade.fxh"),
 		QStringLiteral("reshade-shaders/Shaders/DLSS5_Feed.fx"),
@@ -318,10 +346,13 @@ QString initialize()
 	if (!error.isEmpty()) return startup_status = "No se ha cargado la integración:\n" + error;
 	if (!QFileInfo::exists(config_path())) return startup_status = "No se ha cargado la integración: falta ReShade.ini.";
 	QString read_error;
-	const QString base_override = ini_value(read_text(config_path(), &read_error), "INSTALL", "BasePath");
+	const QString config = read_text(config_path(), &read_error);
+	const QString base_override = ini_value(config, "INSTALL", "BasePath");
 	if (!read_error.isEmpty()) return startup_status = read_error;
 	if (!base_override.isEmpty() && QFileInfo(QDir(root_path()).absoluteFilePath(base_override)).canonicalFilePath() != QFileInfo(root_path()).canonicalFilePath())
 		return startup_status = "No se ha cargado la integración: INSTALL / BasePath redirige ReShade a otra carpeta. Retira esa clave para usar estos ajustes.";
+	if (!write_text(config_path(), settings_only_config(config), &read_error))
+		return startup_status = "No se ha cargado la integración: no se pudo bloquear el menú de ReShade.\n" + read_error;
 
 	const QString layer_path = QDir::toNativeSeparators(QDir(root_path()).filePath("neural-rendering"));
 	// ADD preserves layers installed by drivers and developer tools.
@@ -348,7 +379,7 @@ QString diagnostics()
 	result += "Estado de inicio: " + startup_status + "\n\n";
 	const QString problem = validate_runtime();
 	result += problem.isEmpty() ? "Componentes presentes. Esto no confirma que DLSS esté evaluando fotogramas.\n" : problem + '\n';
-	result += "\nReShade: Inicio/Home. Renderizador de RPCS3: Vulkan. Selecciona la GPU NVIDIA.\n";
+	result += "\nMenú ReShade bloqueado dentro del juego (teclado y mando). Configura los efectos desde Ajustes. Renderizador: Vulkan con GPU NVIDIA.\n";
 	result += "Los cambios INI se aplican tras reiniciar RPCS3. La configuración es global a este paquete.\n";
 	for (const QString& name : {QStringLiteral("ReShade.log"), QStringLiteral("dlss5-feed.log")})
 	{

@@ -14,6 +14,8 @@ QString ini_value(const QString& text, const QString& section, const QString& ke
 void set_ini_value(QString& text, const QString& section, const QString& key, const QString& value);
 QString default_config();
 QString default_preset();
+// Enforce the portable integration's settings-only menu policy.
+QString settings_only_config(QString text);
 bool enabled();
 bool save_enabled(bool value, QString* error = nullptr);
 // The optional directory also allows validating an extracted package before use.

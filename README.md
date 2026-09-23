@@ -1,17 +1,17 @@
 RPCS3 Neural / ReShade — unofficial experimental fork
 ====================================================
 
-[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.1-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
+[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.2-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
 
-This fork adds a **Neural / ReShade** settings tab, local Vulkan integration, numeric sliders for intensity, tone, structure and skin, and four quick presets: Suave, Equilibrado, Detalle and Cinematográfico. The component selection follows [DLSS5oneclick](https://github.com/faisalkindi/DLSS5oneclick). This is community integration through ReShade/Feeder, not an official NVIDIA DLSS integration or an official RPCS3 release.
+This fork adds a **Neural / ReShade** settings tab, local Vulkan integration, sliders with displayed values for every numeric Neural / Feeder control, and four quick presets: Suave, Equilibrado, Detalle and Cinematográfico. The component selection follows [DLSS5oneclick](https://github.com/faisalkindi/DLSS5oneclick). This is community integration through ReShade/Feeder, not an official NVIDIA DLSS integration or an official RPCS3 release.
 
-Download **`Extraer-RPCS3-Neural-0.2.1-win64.exe`** (self-extracting package) or extract **`RPCS3-Neural-0.2.1-public-win64.zip`** completely. Both contain RPCS3 and its DLLs, including OpenCV and Qt. Open `rpcs3.exe` inside the extracted folder; do not move it away from its DLLs or run it from inside a ZIP.
+Download **`Extraer-RPCS3-Neural-0.2.2-win64.exe`** (self-extracting package) or extract **`RPCS3-Neural-0.2.2-public-win64.zip`** completely. Both contain RPCS3 and its DLLs, including OpenCV and Qt. Open `rpcs3.exe` inside the extracted folder; do not move it away from its DLLs or run it from inside a ZIP.
 
-In **Config → Neural / ReShade**, click **Descargar / reparar componentes**, or enable the ReShade checkbox to download missing components automatically. Progress, cancellation and errors are shown in RPCS3. No terminal is needed. Select Vulkan and your compatible NVIDIA GPU, choose a quick preset if desired, save and restart. Activation is off by default; the download preserves pending settings until you save.
+In **Config → Neural / ReShade**, click **Descargar / reparar componentes**, or enable the ReShade checkbox to download missing components automatically. Progress, cancellation and errors are shown in RPCS3. No terminal is needed. Select Vulkan and your compatible NVIDIA GPU, choose a quick preset if desired, save and restart. The in-game ReShade menu is blocked for keyboard and gamepad; configure effects in RPCS3 settings. Disabling the integration requires saving and restarting RPCS3. Activation is off by default; the download preserves pending settings until you save.
 
 The public archive contains the emulator, its redistributable dependencies, licenses and setup scripts. It excludes neural models/add-ons and LumeniteFX; those are downloaded locally because their redistribution is restricted or unverified. Requires Windows x64 and the Microsoft Visual C++ x64 runtime compatible with MSVC 14.51 or later.
 
-**Experimental:** configuration/UI tests, Vulkan device creation, add-on loading and a separate 300-frame neural diagnostic passed on an RTX 4090. No PS3 gameplay, image-quality or performance validation has been completed. [Build tools and pinned dependencies](tools/neural-rendering/README.md) are included; clone with submodules when rebuilding.
+**Experimental:** configuration/UI tests, Vulkan device creation, add-on loading and a separate 300-frame neural diagnostic passed on an RTX 4090. Saw II reached gameplay with successful neural feature-18 evaluations at 3840×2160. Visual comparisons across presets, depth/motion quality and prolonged stability remain unvalidated; users should evaluate these themselves. [Build tools and pinned dependencies](tools/neural-rendering/README.md) are included; clone with submodules when rebuilding.
 
 RPCS3 (upstream project)
 =====
