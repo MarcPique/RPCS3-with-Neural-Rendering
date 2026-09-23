@@ -52,7 +52,7 @@ foreach ($provenanceFile in Get-ChildItem -LiteralPath (Join-Path $package 'THIR
 $exe = Join-Path $package 'rpcs3.exe'
 $buildInfo = [ordered]@{
     release = 'v0.2.2-neural'
-    source = "https://github.com/MarcPique/rpcs3-neural/tree/$sourceCommit"
+    source = "https://github.com/MarcPique/RPCS3-with-Neural-Rendering/tree/$sourceCommit"
     sourceCommit = $sourceCommit
     upstreamBase = '8db660b185496f115701ef4c77c1ca2bef60e422'
     executableSHA256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()

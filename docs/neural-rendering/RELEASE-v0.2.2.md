@@ -15,4 +15,4 @@ Validación: pruebas de configuración, interfaz, descargador y DLL de bloqueo a
 
 Compilación experimental no oficial. Requiere Windows x64 y runtime Visual C++ x64 compatible con MSVC 14.51 o posterior. No contiene juegos, firmware, modelos ni shaders de terceros; estos últimos componentes se obtienen desde sus autores mediante el descargador.
 
-[Guía](https://github.com/MarcPique/rpcs3-neural/blob/neural-rendering/NEURAL_RENDERING.md) · [Validación detallada](https://github.com/MarcPique/rpcs3-neural/blob/neural-rendering/docs/neural-rendering/VALIDACION.md)
+[Guía](https://github.com/MarcPique/RPCS3-with-Neural-Rendering/blob/neural-rendering/NEURAL_RENDERING.md) · [Validación detallada](https://github.com/MarcPique/RPCS3-with-Neural-Rendering/blob/neural-rendering/docs/neural-rendering/VALIDACION.md)

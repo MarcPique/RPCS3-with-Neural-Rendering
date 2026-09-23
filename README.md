@@ -1,7 +1,7 @@
 RPCS3 Neural / ReShade — unofficial experimental fork
 ====================================================
 
-[Download Windows x64 release](https://github.com/MarcPique/rpcs3-neural/releases/tag/v0.2.2-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
+[Download Windows x64 release](https://github.com/MarcPique/RPCS3-with-Neural-Rendering/releases/tag/v0.2.2-neural) · [Setup and controls](NEURAL_RENDERING.md) · [Validation](docs/neural-rendering/VALIDACION.md)
 
 This fork adds a **Neural / ReShade** settings tab, local Vulkan integration, sliders with displayed values for every numeric Neural / Feeder control, and four quick presets: Suave, Equilibrado, Detalle and Cinematográfico. The component selection follows [DLSS5oneclick](https://github.com/faisalkindi/DLSS5oneclick). This is community integration through ReShade/Feeder, not an official NVIDIA DLSS integration or an official RPCS3 release.
 
